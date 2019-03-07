@@ -33,7 +33,7 @@ loadPrcFileData('', 'sync-video 0')
 
 
 class MyApp(ShowBase):
-    def __init__(self):
+    def __init__(self, screen_size=84, DEBUGGING=False):
         ShowBase.__init__(self)
         self.actions = 3
 
@@ -42,7 +42,7 @@ class MyApp(ShowBase):
         self.cam.lookAt(0, 0, 0)
 
         wp = WindowProperties()
-        window_size = 84*1
+        window_size = screen_size
         wp.setSize(window_size, window_size)
         self.win.requestProperties(wp)
 
@@ -63,25 +63,9 @@ class MyApp(ShowBase):
         self.lightNP.node().setShadowCaster(True, 1024, 1024)
         self.render.setLight(self.lightNP)
 
-        self.reset()
-
-    def reset(self):
-        namelist = ['Ground',
-                    'Conveyor',
-                    'Finger',
-                    'Reward Zone',
-                    'Block',
-                    'Scrambled Block',
-                    'Not Rewardable',
-                    'Teleport Me']
-        for child in render.getChildren():
-            for test in namelist:
-                if child.node().name == test:
-                    child.removeNode()
-                    break
-
         self.world = BulletWorld()
-        DEBUGGING = False
+        self.world.setGravity(Vec3(0, 0, -9.81))
+
         if DEBUGGING is True:
             debugNode = BulletDebugNode('Debug')
             debugNode.showWireframe(True)
@@ -91,7 +75,56 @@ class MyApp(ShowBase):
             debugNP = render.attachNewNode(debugNode)
             debugNP.show()
             self.world.setDebugNode(debugNP.node())
-        self.world.setGravity(Vec3(0, 0, -9.81))
+
+        # Reward zone
+        self.rzone_shape = BulletBoxShape(Vec3(.8, 1, 0.5))
+        self.rzone_ghost = BulletGhostNode('Reward Zone')
+        self.rzone_ghost.addShape(self.rzone_shape)
+        self.rzone_ghostNP = self.render.attachNewNode(self.rzone_ghost)
+        self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
+        self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
+        self.world.attachGhost(self.rzone_ghost)
+
+        # Needed for camera image
+        self.dr = self.camNode.getDisplayRegion(0)
+
+        # Needed for camera depth image
+        winprops = WindowProperties.size(self.win.getXSize(), self.win.getYSize())
+        fbprops = FrameBufferProperties()
+        fbprops.setDepthBits(1)
+        self.depthBuffer = self.graphicsEngine.makeOutput(
+            self.pipe, "depth buffer", -2,
+            fbprops, winprops,
+            GraphicsPipe.BFRefuseWindow,
+            self.win.getGsg(), self.win)
+        self.depthTex = Texture()
+        self.depthTex.setFormat(Texture.FDepthComponent)
+        self.depthBuffer.addRenderTexture(self.depthTex,
+            GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
+        lens = self.cam.node().getLens()
+        # the near and far clipping distances can be changed if desired
+        # lens.setNear(5.0)
+        # lens.setFar(500.0)
+        self.depthCam = self.makeCamera(self.depthBuffer,
+            lens=lens,
+            scene=render)
+        self.depthCam.reparentTo(self.cam)
+
+    def reset(self):
+        namelist = ['Ground',
+                    'Conveyor',
+                    'Finger',
+                    'Block',
+                    'Scrambled Block',
+                    'Not Rewardable',
+                    'Teleport Me']
+        for child in render.getChildren():
+            for test in namelist:
+                if child.node().name == test:
+                    self.world.remove(child.node())
+                    child.removeNode()
+                    break
+
 
         # Plane
         self.plane_shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
@@ -128,27 +161,6 @@ class MyApp(ShowBase):
         self.model.flattenLight()
         self.model.reparentTo(self.finger_np)
 
-
-        #self.render.setAntialias(AntialiasAttrib.MAuto)
-
-        # # Penalty zone 1
-        # self.pzone_shape = BulletBoxShape(Vec3(1, 1, 0.5))
-        # self.pzone_ghost = BulletGhostNode('Penalty Zone 1')
-        # self.pzone_ghost.addShape(self.pzone_shape)
-        # self.pzone_ghostNP = self.render.attachNewNode(self.pzone_ghost)
-        # self.pzone_ghostNP.setPos(4.2, 0, 0.86)
-        # self.pzone_ghostNP.setCollideMask(BitMask32(0x0f))
-        # self.world.attachGhost(self.pzone_ghost)
-
-        # Reward zone
-        self.rzone_shape = BulletBoxShape(Vec3(.8, 1, 0.5))
-        self.rzone_ghost = BulletGhostNode('Reward Zone')
-        self.rzone_ghost.addShape(self.rzone_shape)
-        self.rzone_ghostNP = self.render.attachNewNode(self.rzone_ghost)
-        self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
-        self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
-        self.world.attachGhost(self.rzone_ghost)
-
         self.blocks = []
         for block_num in range(15):
             new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0))
@@ -162,40 +174,6 @@ class MyApp(ShowBase):
         self.fps = 20
         self.framecount = 0
 
-        # # Load the environment model.
-        # self.scene = self.loader.loadModel("models/environment")
-        # # Reparent the model to render.
-        # self.scene.reparentTo(self.render)
-        # # Apply scale and position transforms on the model.
-        # self.scene.setScale(0.25, 0.25, 0.25)
-        # self.scene.setPos(-8, 42, 0)
-
-
-
-        # Needed for camera image
-        self.dr = self.camNode.getDisplayRegion(0)
-
-        # Needed for camera depth image
-        winprops = WindowProperties.size(self.win.getXSize(), self.win.getYSize())
-        fbprops = FrameBufferProperties()
-        fbprops.setDepthBits(1)
-        self.depthBuffer = self.graphicsEngine.makeOutput(
-            self.pipe, "depth buffer", -2,
-            fbprops, winprops,
-            GraphicsPipe.BFRefuseWindow,
-            self.win.getGsg(), self.win)
-        self.depthTex = Texture()
-        self.depthTex.setFormat(Texture.FDepthComponent)
-        self.depthBuffer.addRenderTexture(self.depthTex,
-            GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
-        lens = self.cam.node().getLens()
-        # the near and far clipping distances can be changed if desired
-        # lens.setNear(5.0)
-        # lens.setFar(500.0)
-        self.depthCam = self.makeCamera(self.depthBuffer,
-            lens=lens,
-            scene=render)
-        self.depthCam.reparentTo(self.cam)
         return self.step(1)[0]
 
 
@@ -360,7 +338,10 @@ class MyApp(ShowBase):
 def main():
     f = 0
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
-    app = MyApp()
+    app = MyApp(screen_size=84*10)
+    for i in range(100):
+        app.reset()
+    app.reset()
     image, _ , _ = app.step(0)
 
     while True:
@@ -378,46 +359,9 @@ def main():
             next_act = 1
 
         image, score, done = app.step(next_act)
-        if f > 10000:
+        if f > 1000:
             app.reset()
             f = 0
-
-
-        ######################
-        # dt = globalClock.getDt()
-        # app.world.doPhysics(dt, 5, 1.0/120.0)
-
-        # app.reset_conv()
-        # app.check_penalty()
-        # app.check_rewards()
-        # app.check_teleportable(blocks_per_minute=1.5*60)
-
-
-        # # Keep the conveyor moving
-        # app.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
-
-        # app.graphicsEngine.renderFrame()
-        # image = app.get_camera_image()
-        # # image = cv2.resize(image, (84, 84), interpolation=cv2.INTER_CUBIC)
-        # # show_rgbd_image(image, depth_image)
-        # cv2.imshow('state', image)
-        # key = cv2.waitKey(1) & 0xFF
-        # if key == 27 or key == ord('q'):
-        #     print("Pressed ESC or q, exiting")
-        #     break
-
-        # # Move finger
-        # finger_meters_per_second = 2
-        # real_displacement = finger_meters_per_second * dt
-        # max_dist = 1.1
-        # if key == 119:
-        #     app.finger_np.setY(app.finger_np.getY() + real_displacement)
-        #     if app.finger_np.getY() > max_dist:
-        #         app.finger_np.setY(max_dist)
-        # if key == 115:
-        #     app.finger_np.setY(app.finger_np.getY() - real_displacement)
-        #     if app.finger_np.getY() < -max_dist:
-        #         app.finger_np.setY(-max_dist)
 
 if __name__ == '__main__':
     main()
