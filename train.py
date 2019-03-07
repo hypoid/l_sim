@@ -2,7 +2,6 @@ import numpy as np
 import random
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-import matplotlib.pyplot as plt
 import scipy.misc
 import os
 import pdb
