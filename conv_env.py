@@ -40,15 +40,15 @@ class MyApp(ShowBase):
         wp = WindowProperties()
         # Revert
         # window_size = 84*1
-        window_size = 84*8
+        window_size = 84*1
         wp.setSize(window_size, window_size)
         self.win.requestProperties(wp)
 
-        self.cam.setPos(0, 0, 17)
+        self.cam.setPos(0, 0, 7)
         self.cam.lookAt(0, 0, 0)
 
         self.world = BulletWorld()
-        DEBUGGING = True
+        DEBUGGING = False
         if DEBUGGING is True:
             debugNode = BulletDebugNode('Debug')
             debugNode.showWireframe(True)
@@ -269,7 +269,6 @@ class MyApp(ShowBase):
             if block_x > 2.4 and block_name == 'Scrambled Block':
                 self.have_scramble = False
                 scrambled = False
-                print('Renaming ' + block_name + ' to ' + 'Not Rewardable')
                 block.node().name = 'Not Rewardable'
 
         if scrambled is True:
