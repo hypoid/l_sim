@@ -37,15 +37,48 @@ class MyApp(ShowBase):
         ShowBase.__init__(self)
         self.actions = 3
 
+        self.render.setShaderAuto()
+        self.cam.setPos(0, 0, 7)
+        self.cam.lookAt(0, 0, 0)
+
         wp = WindowProperties()
-        # Revert
-        # window_size = 84*1
         window_size = 84*1
         wp.setSize(window_size, window_size)
         self.win.requestProperties(wp)
 
-        self.cam.setPos(0, 0, 7)
-        self.cam.lookAt(0, 0, 0)
+        # Create Ambient Light
+        self.ambientLight = AmbientLight('ambientLight')
+        self.ambientLight.setColor((0.2, 0.2, 0.2, 1))
+        self.ambientLightNP = self.render.attachNewNode(self.ambientLight)
+        self.render.setLight(self.ambientLightNP)
+
+        # Spotlight
+        self.light = Spotlight('light')
+        self.light.setColor((0.9, 0.9, 0.9, 1))
+        self.lightNP = self.render.attachNewNode(self.light)
+        self.lightNP.setPos(0, 10, 10)
+        self.lightNP.lookAt(0, 0, 0)
+        self.lightNP.node().getLens().setFov(40)
+        self.lightNP.node().getLens().setNearFar(10, 100)
+        self.lightNP.node().setShadowCaster(True, 1024, 1024)
+        self.render.setLight(self.lightNP)
+
+        self.reset()
+
+    def reset(self):
+        namelist = ['Ground',
+                    'Conveyor',
+                    'Finger',
+                    'Reward Zone',
+                    'Block',
+                    'Scrambled Block',
+                    'Not Rewardable',
+                    'Teleport Me']
+        for child in render.getChildren():
+            for test in namelist:
+                if child.node().name == test:
+                    child.removeNode()
+                    break
 
         self.world = BulletWorld()
         DEBUGGING = False
@@ -59,12 +92,6 @@ class MyApp(ShowBase):
             debugNP.show()
             self.world.setDebugNode(debugNP.node())
         self.world.setGravity(Vec3(0, 0, -9.81))
-
-        # Create Ambient Light
-        self.ambientLight = AmbientLight('ambientLight')
-        self.ambientLight.setColor((0.2, 0.2, 0.2, 1))
-        self.ambientLightNP = self.render.attachNewNode(self.ambientLight)
-        self.render.setLight(self.ambientLightNP)
 
         # Plane
         self.plane_shape = BulletPlaneShape(Vec3(0, 0, 1), 1)
@@ -101,19 +128,7 @@ class MyApp(ShowBase):
         self.model.flattenLight()
         self.model.reparentTo(self.finger_np)
 
-        # Spotlight
-        self.light = Spotlight('light')
-        self.light.setColor((0.9, 0.9, 0.9, 1))
-        self.lightNP = self.render.attachNewNode(self.light)
-        self.lightNP.setPos(0, 10, 10)
-        self.lightNP.lookAt(0, 0, 0)
-        self.lightNP.node().getLens().setFov(40)
-        self.lightNP.node().getLens().setNearFar(10, 100)
-        self.lightNP.node().setShadowCaster(True, 1024, 1024)
-        self.render.setLight(self.lightNP)
 
-        # Enable the shader generator for the receiving nodes
-        self.render.setShaderAuto()
         #self.render.setAntialias(AntialiasAttrib.MAuto)
 
         # # Penalty zone 1
@@ -127,7 +142,7 @@ class MyApp(ShowBase):
 
         # Reward zone
         self.rzone_shape = BulletBoxShape(Vec3(.8, 1, 0.5))
-        self.rzone_ghost = BulletGhostNode('Penalty Zone 2')
+        self.rzone_ghost = BulletGhostNode('Reward Zone')
         self.rzone_ghost.addShape(self.rzone_shape)
         self.rzone_ghostNP = self.render.attachNewNode(self.rzone_ghost)
         self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
@@ -181,6 +196,7 @@ class MyApp(ShowBase):
             lens=lens,
             scene=render)
         self.depthCam.reparentTo(self.cam)
+        return self.step(1)[0]
 
 
     def spawn_block(self, location):
@@ -338,18 +354,19 @@ class MyApp(ShowBase):
 
         return image, score, done
 
-    def reset(self):
-        return self.step(1)[0]
 
 
 
 def main():
+    f = 0
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
     app = MyApp()
     image, _ , _ = app.step(0)
+
     while True:
+        f += 1
         cv2.imshow('state', image)
-        key = cv2.waitKey(0) & 0xFF
+        key = cv2.waitKey(1) & 0xFF
         if key == 27 or key == ord('q'):
             print("Pressed ESC or q, exiting")
             break
@@ -361,6 +378,9 @@ def main():
             next_act = 1
 
         image, score, done = app.step(next_act)
+        if f > 10000:
+            app.reset()
+            f = 0
 
 
         ######################
