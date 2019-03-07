@@ -31,6 +31,7 @@ loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
 
 
+
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
@@ -39,14 +40,24 @@ class MyApp(ShowBase):
         wp = WindowProperties()
         # Revert
         # window_size = 84*1
-        window_size = 84*1
+        window_size = 84*8
         wp.setSize(window_size, window_size)
         self.win.requestProperties(wp)
 
-        self.cam.setPos(0, 0, 7)
+        self.cam.setPos(0, 0, 17)
         self.cam.lookAt(0, 0, 0)
 
         self.world = BulletWorld()
+        DEBUGGING = True
+        if DEBUGGING is True:
+            debugNode = BulletDebugNode('Debug')
+            debugNode.showWireframe(True)
+            debugNode.showConstraints(True)
+            debugNode.showBoundingBoxes(False)
+            debugNode.showNormals(False)
+            debugNP = render.attachNewNode(debugNode)
+            debugNP.show()
+            self.world.setDebugNode(debugNP.node())
         self.world.setGravity(Vec3(0, 0, -9.81))
 
         # Create Ambient Light
@@ -105,30 +116,21 @@ class MyApp(ShowBase):
         self.render.setShaderAuto()
         #self.render.setAntialias(AntialiasAttrib.MAuto)
 
-        # Delete zone
-        self.dzone_shape = BulletBoxShape(Vec3(1, 10, 10))
-        self.dzone_ghost = BulletGhostNode('Delete Zone')
-        self.dzone_ghost.addShape(self.dzone_shape)
-        self.dzone_ghostNP = self.render.attachNewNode(self.dzone_ghost)
-        self.dzone_ghostNP.setPos(5.7, 0, 0.0)
-        self.dzone_ghostNP.setCollideMask(BitMask32(0x0f))
-        self.world.attachGhost(self.dzone_ghost)
-
-        # Penalty zone 1
-        self.pzone_shape = BulletBoxShape(Vec3(1, 1, 0.5))
-        self.pzone_ghost = BulletGhostNode('Penalty Zone 1')
-        self.pzone_ghost.addShape(self.pzone_shape)
-        self.pzone_ghostNP = self.render.attachNewNode(self.pzone_ghost)
-        self.pzone_ghostNP.setPos(4.2, 0, 0.86)
-        self.pzone_ghostNP.setCollideMask(BitMask32(0x0f))
-        self.world.attachGhost(self.pzone_ghost)
+        # # Penalty zone 1
+        # self.pzone_shape = BulletBoxShape(Vec3(1, 1, 0.5))
+        # self.pzone_ghost = BulletGhostNode('Penalty Zone 1')
+        # self.pzone_ghost.addShape(self.pzone_shape)
+        # self.pzone_ghostNP = self.render.attachNewNode(self.pzone_ghost)
+        # self.pzone_ghostNP.setPos(4.2, 0, 0.86)
+        # self.pzone_ghostNP.setCollideMask(BitMask32(0x0f))
+        # self.world.attachGhost(self.pzone_ghost)
 
         # Reward zone
         self.rzone_shape = BulletBoxShape(Vec3(.8, 1, 0.5))
         self.rzone_ghost = BulletGhostNode('Penalty Zone 2')
         self.rzone_ghost.addShape(self.rzone_shape)
         self.rzone_ghostNP = self.render.attachNewNode(self.rzone_ghost)
-        self.rzone_ghostNP.setPos(2.3, 0.0, 0.86)
+        self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
         self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
         self.world.attachGhost(self.rzone_ghost)
 
@@ -256,8 +258,20 @@ class MyApp(ShowBase):
         rzone_ghost = self.rzone_ghostNP.node()
         scrambled = False
         for node in rzone_ghost.getOverlappingNodes():
-            if node.name == 'Block':
+            if node.name == 'Block' or node.name == 'Scrambled Block':
+                node.name = 'Scrambled Block'
                 scrambled = True
+
+        # Rename blocks that are not eligable for reward due to being too late
+        for block in self.blocks:
+            block_x = block.getPos()[0]
+            block_name = block.node().name
+            if block_x > 2.4 and block_name == 'Scrambled Block':
+                self.have_scramble = False
+                scrambled = False
+                print('Renaming ' + block_name + ' to ' + 'Not Rewardable')
+                block.node().name = 'Not Rewardable'
+
         if scrambled is True:
             self.have_scramble = True
         else:
@@ -275,13 +289,18 @@ class MyApp(ShowBase):
             self.teleport_cooled_down = True
         for block in self.blocks:
             block_x = block.getPos()[0]
-            if block_x > 3.5 and self.time_to_teleport is True and self.teleport_cooled_down is True:
-                self.teleport_cooled_down = False
-                block.setX(-4)
-                block.setY(0.0)
-                block.setZ(2.0)
-                block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
-                block.node().name = 'Block'
+            if block_x > 5:
+                if block.node().name == 'Scrambled Block':
+                    self.have_scramble = False
+                    print('Resetting scrambled block')
+                block.node().name = 'Teleport Me'
+                if self.time_to_teleport is True and self.teleport_cooled_down is True:
+                    self.teleport_cooled_down = False
+                    block.setX(-4)
+                    block.setY(0.0)
+                    block.setZ(2.0)
+                    block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
+                    block.node().name = 'Block'
 
     def step(self, action):
         dt = 1/self.fps
@@ -302,7 +321,7 @@ class MyApp(ShowBase):
 
         self.world.doPhysics(dt, 5, 1.0/120.0)
         self.reset_conv()
-        self.check_teleportable(blocks_per_minute=1.2*60)
+        self.check_teleportable(blocks_per_minute=1.1*60)
 
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
@@ -331,7 +350,7 @@ def main():
     image, _ , _ = app.step(0)
     while True:
         cv2.imshow('state', image)
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(0) & 0xFF
         if key == 27 or key == ord('q'):
             print("Pressed ESC or q, exiting")
             break
