@@ -7,9 +7,10 @@ import scipy.misc
 import os
 import cv2
 
-from myenv import gameEnv
+from conv_env import MyApp as gameEnv
 
-env = gameEnv(partial=False,size=5)
+#env = gameEnv(partial=False,size=5)
+env = gameEnv()
 class Qnetwork():
     def __init__(self,h_size):
         #The network recieves a frame from the game, flattened into an array.
@@ -110,9 +111,10 @@ with tf.Session() as sess:
             j+=1
             a = sess.run(mainQN.predict,feed_dict={mainQN.scalarInput:[s]})[0]
             s1,r,d = env.step(a)
-            image = cv2.cvtColor(s1, cv2.COLOR_BGR2RGB)
+            # image = cv2.cvtColor(s1, cv2.COLOR_BGR2RGB)
+            image = s1
             cv2.imshow('state', image)
-            k = cv2.waitKey(100) & 0xFF
+            k = cv2.waitKey(1) & 0xFF
             s1 = processState(s1)
             s = s1
             if d == True:

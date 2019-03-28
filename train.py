@@ -97,10 +97,10 @@ update_freq = 4 #How often to perform a training step.
 y = .99 #Discount factor on the target Q-values
 startE = 1 #Starting chance of random action
 endE = 0.1 #Final chance of random action
-annealing_steps = 10000. #How many steps of training to reduce startE to endE.
-num_episodes = 5000 #How many episodes of game environment to train network with.
+num_episodes = 500 #How many episodes of game environment to train network with.
+max_epLength = 10000 #The max allowed length of our episode.
+annealing_steps = num_episodes*max_epLength #How many steps of training to reduce startE to endE.
 pre_train_steps = 10000 #How many steps of random actions before training begins.
-max_epLength = 1000 #The max allowed length of our episode.
 load_model = False #Whether to load a saved model.
 path = "./dqn" #The path to save our model to.
 h_size = 512 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
@@ -143,12 +143,17 @@ with tf.Session() as sess:
         episodeBuffer = experience_buffer()
         #Reset environment and get first new observation
         s = env.reset()
+        # Skip 100 frames
+        for i in range(300):
+            s,_,_ = env.step(0)
+        env.render_stuff = False
+
         s = processState(s)
         d = False
         rAll = 0
         j = 0
         #The Q-Network
-        while j < max_epLength: #If the agent takes longer than 200 moves to reach either of the blocks, end the trial.
+        while j < max_epLength:
             j+=1
             #Choose an action by greedily (with e chance of random action) from the Q-network
             if np.random.rand(1) < e or (total_steps < pre_train_steps and load_model is False):
@@ -188,11 +193,16 @@ with tf.Session() as sess:
         jList.append(j)
         rList.append(rAll)
         #Periodically save the model.
-        if i % 1000 == 0:
-            saver.save(sess,path+'/model-'+str(i)+'.ckpt')
-            print("Saved Model")
-        if len(rList) % 10 == 0:
-            print(total_steps,np.mean(rList[-10:]), e)
+        # if i % 1000 == 0:
+        #     saver.save(sess,path+'/model-'+str(i)+'.ckpt')
+        #     print("Saved Model")
+        saver.save(sess,path+'/model-'+str(i)+'.ckpt')
+        print("Saved Model")
+
+        #if len(rList) % 10 == 0:
+        #    print(total_steps,np.mean(rList[-10:]), e)
+        print(total_steps, np.mean(rList[-1:]), e)
+
     saver.save(sess,path+'/model-'+str(i)+'.ckpt')
 print("Percent of succesful episodes: " + str(sum(rList)/num_episodes) + "%")
 

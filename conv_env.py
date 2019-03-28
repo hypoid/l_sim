@@ -26,25 +26,50 @@ from panda3d.core import AmbientLight
 from panda3d.core import DirectionalLight
 from panda3d.core import Spotlight
 from panda3d.core import AntialiasAttrib
+from panda3d.core import GraphicsPipeSelection
+from panda3d.core import Camera
+from panda3d.core import NodePath
 
 loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
+loadPrcFileData('', 'window-type none')
 
 
 
 class MyApp(ShowBase):
     def __init__(self, screen_size=84, DEBUGGING=False):
         ShowBase.__init__(self)
+        self.render_stuff = True
         self.actions = 3
+
+        winprops = WindowProperties.size(screen_size, screen_size)
+        fbprops = FrameBufferProperties()
+        fbprops.set_rgba_bits(8, 8, 8, 0)
+        fbprops.set_depth_bits(24)
+        self.pipe = GraphicsPipeSelection.get_global_ptr().make_module_pipe('pandagl')
+        self.imageBuffer = self.graphicsEngine.makeOutput(
+            self.pipe,
+            "image buffer",
+            1,
+            fbprops,
+            winprops,
+            GraphicsPipe.BFRefuseWindow)
+
+        self.camera = Camera('cam')
+        self.cam = NodePath(self.camera)
+        self.cam.reparentTo(self.render)
+
+        self.dr = self.imageBuffer.makeDisplayRegion()
+        self.dr.setCamera(self.cam)
 
         self.render.setShaderAuto()
         self.cam.setPos(0, 0, 7)
         self.cam.lookAt(0, 0, 0)
 
-        wp = WindowProperties()
-        window_size = screen_size
-        wp.setSize(window_size, window_size)
-        self.win.requestProperties(wp)
+        # wp = WindowProperties()
+        # window_size = screen_size
+        # wp.setSize(window_size, window_size)
+        # self.win.requestProperties(wp)
 
         # Create Ambient Light
         self.ambientLight = AmbientLight('ambientLight')
@@ -86,29 +111,29 @@ class MyApp(ShowBase):
         self.world.attachGhost(self.rzone_ghost)
 
         # Needed for camera image
-        self.dr = self.camNode.getDisplayRegion(0)
+        #self.dr = self.camNode.getDisplayRegion(0)
 
-        # Needed for camera depth image
-        winprops = WindowProperties.size(self.win.getXSize(), self.win.getYSize())
-        fbprops = FrameBufferProperties()
-        fbprops.setDepthBits(1)
-        self.depthBuffer = self.graphicsEngine.makeOutput(
-            self.pipe, "depth buffer", -2,
-            fbprops, winprops,
-            GraphicsPipe.BFRefuseWindow,
-            self.win.getGsg(), self.win)
-        self.depthTex = Texture()
-        self.depthTex.setFormat(Texture.FDepthComponent)
-        self.depthBuffer.addRenderTexture(self.depthTex,
-            GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
-        lens = self.cam.node().getLens()
-        # the near and far clipping distances can be changed if desired
-        # lens.setNear(5.0)
-        # lens.setFar(500.0)
-        self.depthCam = self.makeCamera(self.depthBuffer,
-            lens=lens,
-            scene=render)
-        self.depthCam.reparentTo(self.cam)
+        # # Needed for camera depth image
+        # winprops = WindowProperties.size(self.win.getXSize(), self.win.getYSize())
+        # fbprops = FrameBufferProperties()
+        # fbprops.setDepthBits(1)
+        # self.depthBuffer = self.graphicsEngine.makeOutput(
+        #     self.pipe, "depth buffer", -2,
+        #     fbprops, winprops,
+        #     GraphicsPipe.BFRefuseWindow,
+        #     self.win.getGsg(), self.win)
+        # self.depthTex = Texture()
+        # self.depthTex.setFormat(Texture.FDepthComponent)
+        # self.depthBuffer.addRenderTexture(self.depthTex,
+        #     GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
+        # lens = self.cam.node().getLens()
+        # # the near and far clipping distances can be changed if desired
+        # # lens.setNear(5.0)
+        # # lens.setFar(500.0)
+        # self.depthCam = self.makeCamera(self.depthBuffer,
+        #     lens=lens,
+        #     scene=render)
+        # self.depthCam.reparentTo(self.cam)
 
     def reset(self):
         namelist = ['Ground',
@@ -118,7 +143,7 @@ class MyApp(ShowBase):
                     'Scrambled Block',
                     'Not Rewardable',
                     'Teleport Me']
-        for child in render.getChildren():
+        for child in self.render.getChildren():
             for test in namelist:
                 if child.node().name == test:
                     self.world.remove(child.node())
@@ -143,7 +168,7 @@ class MyApp(ShowBase):
         self.conv_np.setPos(-95.0, 0.0, 0.1)
         self.conv_node.addShape(self.conv_shape)
         self.world.attachRigidBody(self.conv_node)
-        self.model = loader.loadModel('conv.egg')
+        self.model = loader.loadModel('assets/conv.egg')
         self.model.flattenLight()
         self.model.reparentTo(self.conv_np)
 
@@ -157,7 +182,7 @@ class MyApp(ShowBase):
         self.finger_np.setPos(1.8, 0.0, 0.24 + 0.0254*3.5)
         self.finger_node.addShape(self.finger_shape)
         self.world.attachRigidBody(self.finger_node)
-        self.model = loader.loadModel('finger.egg')
+        self.model = loader.loadModel('assets/finger.egg')
         self.model.flattenLight()
         self.model.reparentTo(self.finger_np)
 
@@ -189,13 +214,14 @@ class MyApp(ShowBase):
         block_np.setHpr(random.uniform(-60, 60), 0.0, 0.0)
         node.addShape(shape)
         self.world.attachRigidBody(node)
-        model = loader.loadModel('bullet-samples/models/box.egg')
+        model = loader.loadModel('assets/bullet-samples/models/box.egg')
         model.setH(90)
         model.setSy(0.0254*4*2)
         model.setSx(0.0254*24*2)
         model.setSz(0.0254*2*2)
         model.flattenLight()
         model.reparentTo(block_np)
+        block_np.node().setTag('scrambled', 'False')
         return block_np
 
     def get_camera_image(self, requested_format=None):
@@ -217,17 +243,6 @@ class MyApp(ShowBase):
         image = np.flipud(image)
         return image[:,:,:3]
 
-    def get_camera_depth_image(self):
-        """
-        Returns the camera's depth image, which is of type float32 and has
-        values between 0.0 and 1.0.
-        """
-        data = self.depthTex.getRamImage()
-        depth_image = np.frombuffer(data, np.float32)
-        depth_image.shape = (self.depthTex.getYSize(), self.depthTex.getXSize(), self.depthTex.getNumComponents())
-        depth_image = np.flipud(depth_image)
-        return depth_image
-
     def reset_conv(self):
         conveyor_dist_left = 1 - self.conv_np.getPos()[0]
         if conveyor_dist_left < 10:
@@ -236,15 +251,6 @@ class MyApp(ShowBase):
         # self.conv_np.setY(0.0)
         # self.conv_np.setHpr(0.0, 0.0, 0.0)
 
-    def check_penalty(self):
-        penalty = 0
-        self.pzone_ghost = self.pzone_ghostNP.node()
-        for node in self.pzone_ghost.getOverlappingNodes():
-            if node.name == 'Block':
-                penalty = 1
-                node.name = 'Scramble'
-                self.have_scramble = False
-        return penalty
 
     def check_rewards(self):
         reward = 0
@@ -252,18 +258,18 @@ class MyApp(ShowBase):
         rzone_ghost = self.rzone_ghostNP.node()
         scrambled = False
         for node in rzone_ghost.getOverlappingNodes():
-            if node.name == 'Block' or node.name == 'Scrambled Block':
-                node.name = 'Scrambled Block'
+            if node.name == 'Block':
+                node.setTag('scrambled', 'True')
                 scrambled = True
 
-        # Rename blocks that are not eligable for reward due to being too late
+        # Delete flags for blocks that are not eligable for reward due to being too late
         for block in self.blocks:
             block_x = block.getPos()[0]
-            block_name = block.node().name
-            if block_x > 2.4 and block_name == 'Scrambled Block':
+            block_scrambled = block.node().getTag('scrambled')
+            if block_x > 2.4 and block_scrambled == 'True':
                 self.have_scramble = False
                 scrambled = False
-                block.node().name = 'Not Rewardable'
+                block.node().setTag('scrambled', 'False')
 
         if scrambled is True:
             self.have_scramble = True
@@ -280,20 +286,32 @@ class MyApp(ShowBase):
         else:
             self.time_to_teleport = False
             self.teleport_cooled_down = True
+
         for block in self.blocks:
             block_x = block.getPos()[0]
             if block_x > 5:
-                if block.node().name == 'Scrambled Block':
+                block_scrambled = block.node().getTag('scrambled')
+                if block_scrambled == 'True':
                     self.have_scramble = False
-                    print('Resetting scrambled block')
-                block.node().name = 'Teleport Me'
+                    block.node().setTag('scrambled', 'False')
                 if self.time_to_teleport is True and self.teleport_cooled_down is True:
                     self.teleport_cooled_down = False
                     block.setX(-4)
                     block.setY(0.0)
                     block.setZ(2.0)
                     block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
-                    block.node().name = 'Block'
+            # if block_x > 5:
+            #     if block.node().name == 'Scrambled Block':
+            #         self.have_scramble = False
+            #     block.node().name = 'Teleport Me'
+            #     if self.time_to_teleport is True and self.teleport_cooled_down is True:
+            #         self.teleport_cooled_down = False
+            #         block.setX(-4)
+            #         block.setY(0.0)
+            #         block.setZ(2.0)
+            #         block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
+            #         block.node().name = 'Block'
+
 
     def step(self, action):
         dt = 1/self.fps
@@ -319,16 +337,14 @@ class MyApp(ShowBase):
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
 
-        self.graphicsEngine.renderFrame()
+        if self.render_stuff == True:
+            self.graphicsEngine.renderFrame()
         image = self.get_camera_image()
         # image = cv2.resize(image, (84, 84), interpolation=cv2.INTER_CUBIC)
 
         score = 0
         score += self.check_rewards()
-        #score -= self.check_penalty()
         done = False
-        if score != 0:
-            print(score)
 
         return image, score, done
 
@@ -336,32 +352,35 @@ class MyApp(ShowBase):
 
 
 def main():
-    f = 0
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
-    app = MyApp(screen_size=84*10)
-    for i in range(100):
-        app.reset()
+    app = MyApp(screen_size=84*8)
+    num_episodes = 5000
+    max_epLength = 10000
     app.reset()
-    image, _ , _ = app.step(0)
+    for ep_number in range(num_episodes):
+        for i in range(100):
+            image,s,done = app.step(0)
+        score = 0
+        f = 0
+        while True:
+            # app.render_stuff = False
+            f += 1
+            cv2.imshow('state', image)
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27 or key == ord('q'):
+                print("Pressed ESC or q, exiting")
+                exit()
+            elif key == 119:
+                next_act = 0
+            elif key == 115:
+                next_act = 2
+            else:
+                next_act = 1
 
-    while True:
-        f += 1
-        cv2.imshow('state', image)
-        key = cv2.waitKey(1) & 0xFF
-        if key == 27 or key == ord('q'):
-            print("Pressed ESC or q, exiting")
-            break
-        elif key == 119:
-            next_act = 0
-        elif key == 115:
-            next_act = 2
-        else:
-            next_act = 1
+            image, s, done = app.step(next_act)
+            score += s
+            if f > max_epLength:
+                break
+        print((ep_number+1)*max_epLength, score)
 
-        image, score, done = app.step(next_act)
-        if f > 1000:
-            app.reset()
-            f = 0
-
-if __name__ == '__main__':
-    main()
+if __name__ == '__main__': main()
