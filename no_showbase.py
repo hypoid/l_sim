@@ -31,6 +31,7 @@ from panda3d.core import Camera
 from panda3d.core import GraphicsEngine
 from panda3d.core import GraphicsPipeSelection
 from direct.showbase.Loader import Loader
+from memory_profiler import profile
 
 
 
@@ -333,6 +334,9 @@ class MyApp():
 
 
 
+def loop(app,next_act,score):
+    return next_act, score
+
 def main():
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
     app = MyApp(screen_size=84)
@@ -342,12 +346,15 @@ def main():
     app.image = app.get_camera_image()
     for ep_number in range(num_episodes):
         app.reset()
+        # After a reset, we run for a little while to make sure the belt is full of blocks
+        # This way the network has to wait for blocks
         for i in range(100):
             image,s,done = app.step(0)
         score = 0
-        f = 0
-        while True:
-            f += 1
+        next_act = 0
+        for step_num in range(max_epLength):
+            image, s, done = app.step(next_act)
+            score += s
             cv2.imshow('state', image)
             key = cv2.waitKey(1) & 0xFF
             if key == 27 or key == ord('q'):
@@ -359,11 +366,6 @@ def main():
                 next_act = 2
             else:
                 next_act = 1
-
-            image, s, done = app.step(next_act)
-            score += s
-            if f > max_epLength:
-                break
         print((ep_number+1)*max_epLength, score)
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@ from panda3d.core import AntialiasAttrib
 from panda3d.core import GraphicsPipeSelection
 from panda3d.core import Camera
 from panda3d.core import NodePath
+import  memory_profiler
 
 loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
@@ -206,7 +207,7 @@ class MyApp(ShowBase):
         node = BulletRigidBodyNode('Block')
         node.setFriction(1.0)
         block_np = self.render.attachNewNode(node)
-        block_np.setAntialias(AntialiasAttrib.MMultisample)
+        # block_np.setAntialias(AntialiasAttrib.MMultisample)
         shape = BulletBoxShape(Vec3(0.0254*4, 0.0254*24, 0.0254*2))
         node.setMass(1.0)
         #block_np.setPos(-3.7, 0.0, 2.0)
@@ -300,17 +301,6 @@ class MyApp(ShowBase):
                     block.setY(0.0)
                     block.setZ(2.0)
                     block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
-            # if block_x > 5:
-            #     if block.node().name == 'Scrambled Block':
-            #         self.have_scramble = False
-            #     block.node().name = 'Teleport Me'
-            #     if self.time_to_teleport is True and self.teleport_cooled_down is True:
-            #         self.teleport_cooled_down = False
-            #         block.setX(-4)
-            #         block.setY(0.0)
-            #         block.setZ(2.0)
-            #         block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
-            #         block.node().name = 'Block'
 
 
     def step(self, action):
@@ -349,8 +339,6 @@ class MyApp(ShowBase):
         return image, score, done
 
 
-
-
 def main():
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
     app = MyApp(screen_size=84*8)
@@ -362,8 +350,10 @@ def main():
             image,s,done = app.step(0)
         score = 0
         f = 0
-        while True:
-            # app.render_stuff = False
+        next_act = 1
+        for step_num in range(max_epLength):
+            image, s, done = app.step(next_act)
+            score += s
             f += 1
             cv2.imshow('state', image)
             key = cv2.waitKey(1) & 0xFF
@@ -376,11 +366,9 @@ def main():
                 next_act = 2
             else:
                 next_act = 1
-
-            image, s, done = app.step(next_act)
-            score += s
-            if f > max_epLength:
-                break
+            if step_num % 100 == 0:
+                #print(memory_profiler.memory_usage(-1, interval=.2, timeout=1))
+                print(memory_profiler.memory_usage())
         print((ep_number+1)*max_epLength, score)
 
 if __name__ == '__main__': main()
