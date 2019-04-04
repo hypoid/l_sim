@@ -93,16 +93,17 @@ class MyApp(ShowBase):
 
 
 def main():
-    SHOW_MEM_STATS = True
     app = MyApp(screen_size=84*1)
     step_num = 0
-    # Uncomment for Memory Usage Stats
+
     if SHOW_MEM_STATS:
-        last_mem = memory_profiler.memory_usage()[0]
+        self.last_mem = memory_profiler.memory_usage()[0]
+
     app.start_time = time.time()
     while True:
         step_num += 1
         image = app.step()
+
         if SHOW_IMAGE:
             cv2.imshow('state', image)
             key = cv2.waitKey(1) & 0xFF
