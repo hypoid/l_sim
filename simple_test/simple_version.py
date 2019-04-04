@@ -70,8 +70,10 @@ class MyApp(ShowBase):
 
 
     def get_camera_image(self, requested_format=None):
-        data = self.dr.getScreenshot().getRamImage()
+        tex = self.dr.getScreenshot()
+        data = tex.getRamImage()
         image = np.frombuffer(data, np.uint8)
+        image.shape = (tex.getYSize(), tex.getXSize(), tex.getNumComponents())
         return image
 
 
@@ -97,7 +99,7 @@ def main():
     step_num = 0
 
     if SHOW_MEM_STATS:
-        self.last_mem = memory_profiler.memory_usage()[0]
+        last_mem = memory_profiler.memory_usage()[0]
 
     app.start_time = time.time()
     while True:
