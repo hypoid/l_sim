@@ -101,7 +101,6 @@ def main():
     if SHOW_MEM_STATS:
         last_mem = memory_profiler.memory_usage()[0]
 
-    app.start_time = time.time()
     while True:
         step_num += 1
         image = app.step()
