@@ -13,7 +13,7 @@ from panda3d.core import loadPrcFileData
 
 
 SHOW_IMAGE = False
-SHOW_MEM_STATS = True
+SHOW_MEM_STATS = False
 
 if SHOW_IMAGE:
     import cv2
