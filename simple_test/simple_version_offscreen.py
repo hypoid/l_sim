@@ -12,8 +12,6 @@ from panda3d.core import NodePath
 from panda3d.core import loadPrcFileData
 
 
-loadPrcFileData('', 'window-type none')
-
 SHOW_IMAGE = False
 SHOW_MEM_STATS = True
 
@@ -25,31 +23,7 @@ if SHOW_MEM_STATS:
 
 class MyApp(ShowBase):
     def __init__(self, screen_size=84):
-        ShowBase.__init__(self)
-        self.render.setShaderAuto()
-
-        # Offscreen Buffer
-        winprops = WindowProperties.size(screen_size, screen_size)
-        fbprops = FrameBufferProperties()
-        self.pipe = GraphicsPipeSelection.get_global_ptr().make_module_pipe('pandagl')
-        self.imageBuffer = self.graphicsEngine.makeOutput(
-            self.pipe,
-            "image buffer",
-            1,
-            fbprops,
-            winprops,
-            GraphicsPipe.BFRefuseWindow)
-
-        # Camera
-        self.camera = Camera('cam')
-        self.cam = NodePath(self.camera)
-        self.cam.reparentTo(self.render)
-        self.cam.setPos(0, 0, 7)
-        self.cam.lookAt(0, 0, 0)
-
-        #Display Region
-        self.dr = self.imageBuffer.makeDisplayRegion()
-        self.dr.setCamera(self.cam)
+        ShowBase.__init__(self, windowType='offscreen')
 
         # Spotlight with shadows
         self.light = Spotlight('light')
@@ -69,7 +43,8 @@ class MyApp(ShowBase):
 
 
     def get_camera_image(self, requested_format=None):
-        tex = self.dr.getScreenshot()
+        dr = self.camNode.getDisplayRegion(0)
+        tex = dr.getScreenshot()
         data = tex.getRamImage()
         image = np.frombuffer(data, np.uint8)
         image.shape = (tex.getYSize(), tex.getXSize(), tex.getNumComponents())
@@ -90,7 +65,7 @@ class MyApp(ShowBase):
         self.rotate_light()
         self.graphicsEngine.renderFrame()
         image = self.get_camera_image()
-        return image
+        return
 
 
 def main():
