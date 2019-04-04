@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import time
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import FrameBufferProperties, WindowProperties
