@@ -1,12 +1,9 @@
 import numpy as np
 import random
 import time
-# import cv2
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import FrameBufferProperties, WindowProperties
 from panda3d.core import GraphicsPipe, GraphicsOutput
-# from panda3d.core import Texture
-
 from panda3d.core import PandaNode
 from panda3d.core import Vec3
 from panda3d.core import Spotlight
@@ -14,9 +11,18 @@ from panda3d.core import GraphicsPipeSelection
 from panda3d.core import Camera
 from panda3d.core import NodePath
 from panda3d.core import loadPrcFileData
-import  memory_profiler
+
 
 loadPrcFileData('', 'window-type none')
+
+SHOW_IMAGE = False
+SHOW_MEM_STATS = False
+
+if SHOW_IMAGE:
+    import cv2
+
+if SHOW_MEM_STATS:
+    import  memory_profiler
 
 class MyApp(ShowBase):
     def __init__(self, screen_size=84):
@@ -64,7 +70,6 @@ class MyApp(ShowBase):
 
 
     def get_camera_image(self, requested_format=None):
-        tex = self.dr.getScreenshot()
         data = self.dr.getScreenshot().getRamImage()
         image = np.frombuffer(data, np.uint8)
         return image
@@ -88,25 +93,29 @@ class MyApp(ShowBase):
 
 
 def main():
+    SHOW_MEM_STATS = True
     app = MyApp(screen_size=84*1)
     step_num = 0
-    last_mem = memory_profiler.memory_usage()[0]
+    # Uncomment for Memory Usage Stats
+    if SHOW_MEM_STATS:
+        last_mem = memory_profiler.memory_usage()[0]
     app.start_time = time.time()
     while True:
         step_num += 1
         image = app.step()
-        # cv2.imshow('state', image)
-        # key = cv2.waitKey(1) & 0xFF
-        # if key == 27 or key == ord('q'):
-        #     print("Pressed ESC or q, exiting")
-        #     exit()
+        if SHOW_IMAGE:
+            cv2.imshow('state', image)
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27 or key == ord('q'):
+                print("Pressed ESC or q, exiting")
+                exit()
 
-        # Memory Usage
-        if step_num % 1000 == 0:
-            now_mem = memory_profiler.memory_usage()[0]
-            if step_num != 1000:
-                print('Memory per 1k steps:', now_mem-last_mem, 'MB')
-            last_mem = now_mem
+        if SHOW_MEM_STATS:
+            if step_num % 1000 == 0:
+                now_mem = memory_profiler.memory_usage()[0]
+                if step_num != 1000:
+                    print('Memory per 1k steps:', now_mem-last_mem, 'MB')
+                last_mem = now_mem
 
 if __name__ == '__main__':
     main()
