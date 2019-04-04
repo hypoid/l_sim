@@ -13,7 +13,7 @@ from panda3d.core import loadPrcFileData
 
 
 SHOW_IMAGE = False
-SHOW_MEM_STATS = False
+SHOW_MEM_STATS = True
 
 if SHOW_IMAGE:
     import cv2
@@ -25,12 +25,11 @@ class MyApp(ShowBase):
     def __init__(self, screen_size=84):
         ShowBase.__init__(self, windowType='offscreen')
 
-        # Spotlight with shadows
+        # Spotlight
         self.light = Spotlight('light')
         self.lightNP = self.render.attachNewNode(self.light)
         self.lightNP.setPos(0, 10, 10)
         self.lightNP.lookAt(0, 0, 0)
-        self.lightNP.node().setShadowCaster(True, 1024, 1024)
         self.render.setLight(self.lightNP)
 
         # Block
