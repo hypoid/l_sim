@@ -1,15 +1,11 @@
 import numpy as np
 import time
 from direct.showbase.ShowBase import ShowBase
-from panda3d.core import FrameBufferProperties, WindowProperties
-from panda3d.core import GraphicsPipe, GraphicsOutput
 from panda3d.core import PandaNode
 from panda3d.core import Vec3
 from panda3d.core import Spotlight
-from panda3d.core import GraphicsPipeSelection
 from panda3d.core import Camera
 from panda3d.core import NodePath
-from panda3d.core import loadPrcFileData
 
 
 SHOW_IMAGE = False
