@@ -6,6 +6,7 @@ from panda3d.core import Vec3
 from panda3d.core import Spotlight
 from panda3d.core import Camera
 from panda3d.core import NodePath
+import pdb
 
 
 SHOW_IMAGE = False
@@ -85,6 +86,7 @@ class MyApp(ShowBase):
 def main():
     app = MyApp(screen_size=84*1)
     app.taskMgr.add(app.step, 'step')
+    pdb.set_trace()
     app.run()
 
 if __name__ == '__main__':

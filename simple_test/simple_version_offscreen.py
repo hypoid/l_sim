@@ -6,6 +6,7 @@ from panda3d.core import Vec3
 from panda3d.core import Spotlight
 from panda3d.core import Camera
 from panda3d.core import NodePath
+from panda3d.direct import throw_new_frame
 
 
 SHOW_IMAGE = False
@@ -65,6 +66,7 @@ class MyApp(ShowBase):
 
 def main():
     app = MyApp(screen_size=84*1)
+    app.eventMgr.restart()
     step_num = 0
 
     if SHOW_MEM_STATS:
