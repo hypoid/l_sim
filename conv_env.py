@@ -29,6 +29,8 @@ from panda3d.core import AntialiasAttrib
 from panda3d.core import GraphicsPipeSelection
 from panda3d.core import Camera
 from panda3d.core import NodePath
+from panda3d.core import TransformState
+from panda3d.core import RenderState
 import  memory_profiler
 
 loadPrcFileData('', 'show-frame-rate-meter true')
@@ -335,6 +337,8 @@ class MyApp(ShowBase):
         score = 0
         score += self.check_rewards()
         done = False
+        TransformState.garbageCollect()
+        RenderState.garbageCollect()
 
         return image, score, done
 

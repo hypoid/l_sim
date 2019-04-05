@@ -6,6 +6,8 @@ from panda3d.core import Vec3
 from panda3d.core import Spotlight
 from panda3d.core import Camera
 from panda3d.core import NodePath
+from panda3d.core import TransformState
+from panda3d.core import RenderState
 from panda3d.direct import throw_new_frame
 
 
