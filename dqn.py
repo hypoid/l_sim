@@ -1,11 +1,12 @@
-TRAIN = False
-TEST = True
+TRAIN = True
+TEST = False
 
 
 """
 Implementation of DeepMind's Deep Q-Learning by Fabio M. Graetz, 2018
 If you have questions or suggestions, write me a mail fabiograetzatgooglemaildotcom
 """
+
 import os
 import random
 # import gym
