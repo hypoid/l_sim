@@ -36,6 +36,8 @@ import  memory_profiler
 loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
 loadPrcFileData('', 'window-type none')
+# loadPrcFileData('', 'state-cache false')
+# loadPrcFileData('', 'transform-cache false')
 
 
 
@@ -68,11 +70,6 @@ class MyApp(ShowBase):
         self.render.setShaderAuto()
         self.cam.setPos(0, 0, 7)
         self.cam.lookAt(0, 0, 0)
-
-        # wp = WindowProperties()
-        # window_size = screen_size
-        # wp.setSize(window_size, window_size)
-        # self.win.requestProperties(wp)
 
         # Create Ambient Light
         self.ambientLight = AmbientLight('ambientLight')
@@ -329,23 +326,22 @@ class MyApp(ShowBase):
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
 
-        if self.render_stuff == True:
-            self.graphicsEngine.renderFrame()
+        self.graphicsEngine.renderFrame()
+        TransformState.garbageCollect()
+        RenderState.garbageCollect()
         image = self.get_camera_image()
         # image = cv2.resize(image, (84, 84), interpolation=cv2.INTER_CUBIC)
 
         score = 0
         score += self.check_rewards()
         done = False
-        TransformState.garbageCollect()
-        RenderState.garbageCollect()
 
         return image, score, done
 
 
 def main():
     cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
-    app = MyApp(screen_size=84*8)
+    app = MyApp(screen_size=84*1)
     num_episodes = 5000
     max_epLength = 10000
     app.reset()
@@ -357,10 +353,12 @@ def main():
         next_act = 1
         for step_num in range(max_epLength):
             image, s, done = app.step(next_act)
+            if s != 0:
+                print(s)
             score += s
             f += 1
             cv2.imshow('state', image)
-            key = cv2.waitKey(1) & 0xFF
+            key = cv2.waitKey(50) & 0xFF
             if key == 27 or key == ord('q'):
                 print("Pressed ESC or q, exiting")
                 exit()
@@ -370,9 +368,6 @@ def main():
                 next_act = 2
             else:
                 next_act = 1
-            if step_num % 100 == 0:
-                #print(memory_profiler.memory_usage(-1, interval=.2, timeout=1))
-                print(memory_profiler.memory_usage())
         print((ep_number+1)*max_epLength, score)
 
 if __name__ == '__main__': main()

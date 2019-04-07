@@ -10,6 +10,10 @@ from panda3d.core import TransformState
 from panda3d.core import RenderState
 from panda3d.direct import throw_new_frame
 
+from panda3d.core import loadPrcFileData
+loadPrcFileData('', 'state-cache false')
+loadPrcFileData('', 'transform-cache false')
+
 
 SHOW_IMAGE = False
 SHOW_MEM_STATS = True

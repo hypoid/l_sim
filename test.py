@@ -13,8 +13,8 @@ from conv_env import MyApp as gameEnv
 env = gameEnv()
 class Qnetwork():
     def __init__(self,h_size):
-        #The network recieves a frame from the game, flattened into an array.
-        #It then resizes it and processes it through four convolutional layers.
+        # The network recieves a frame from the game, flattened into an array.
+        # It then resizes it and processes it through four convolutional layers.
         self.scalarInput =  tf.placeholder(shape=[None,21168],dtype=tf.float32)
         self.imageIn = tf.reshape(self.scalarInput,shape=[-1,84,84,3])
         self.conv1 = slim.conv2d( \
@@ -26,7 +26,7 @@ class Qnetwork():
         self.conv4 = slim.conv2d( \
             inputs=self.conv3,num_outputs=h_size,kernel_size=[7,7],stride=[1,1],padding='VALID', biases_initializer=None)
 
-        #We take the output from the final convolutional layer and split it into separate advantage and value streams.
+        # We take the output from the final convolutional layer and split it into separate advantage and value streams.
         self.streamAC,self.streamVC = tf.split(self.conv4,2,3)
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
@@ -36,11 +36,11 @@ class Qnetwork():
         self.Advantage = tf.matmul(self.streamA,self.AW)
         self.Value = tf.matmul(self.streamV,self.VW)
 
-        #Then combine them together to get our final Q-values.
+        # Then combine them together to get our final Q-values.
         self.Qout = self.Value + tf.subtract(self.Advantage,tf.reduce_mean(self.Advantage,axis=1,keep_dims=True))
         self.predict = tf.argmax(self.Qout,1)
 
-        #Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
+        # Below we obtain the loss by taking the sum of squares difference between the target and prediction Q values.
         self.targetQ = tf.placeholder(shape=[None],dtype=tf.float32)
         self.actions = tf.placeholder(shape=[None],dtype=tf.int32)
         self.actions_onehot = tf.one_hot(self.actions,env.actions,dtype=tf.float32)
@@ -81,8 +81,11 @@ def updateTarget(op_holder,sess):
     for op in op_holder:
         sess.run(op)
 
-path = "./dqn" #The path to save our model to.
-h_size = 512 #The size of the final convolutional layer before splitting it into Advantage and Value streams.
+
+# The path to save our model to.
+path = "./training_session_1/models/"
+# The size of the final convolutional layer before splitting it into Advantage and Value streams.
+h_size = 512
 tf.reset_default_graph()
 mainQN = Qnetwork(h_size)
 
@@ -90,17 +93,14 @@ init = tf.global_variables_initializer()
 
 saver = tf.train.Saver()
 
-#Make a path for our model to be saved in.
-if not os.path.exists(path):
-    os.makedirs(path)
-
 cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
 
 with tf.Session() as sess:
     sess.run(init)
-    print('Loading Model...')
+    print('Loading Model:', path)
     ckpt = tf.train.get_checkpoint_state(path)
     saver.restore(sess,ckpt.model_checkpoint_path)
+    print(ckpt.model_checkpoint_path)
 
     while True:
         s = env.reset()
