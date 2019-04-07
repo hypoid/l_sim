@@ -1,9 +1,5 @@
-TRAIN = True
-TEST = False
-
-ENV_NAME = 'BreakoutDeterministic-v4'
-#ENV_NAME = 'PongDeterministic-v4'  
-# You can increase the learning rate to 0.00025 in Pong for quicker results
+TRAIN = False
+TEST = True
 
 
 """
@@ -19,6 +15,8 @@ import imageio
 from skimage.transform import resize
 from conv_env import MyApp as conv_env
 import pdb
+import cv2
+import time
 
 class ProcessFrame:
     """Resizes and converts RGB Env frames to grayscale"""
@@ -30,19 +28,14 @@ class ProcessFrame:
         """
         self.frame_height = frame_height
         self.frame_width = frame_width
-        # self.frame = tf.placeholder(shape=[210, 160, 3], dtype=tf.uint8)
         self.frame = tf.placeholder(shape=[84, 84, 3], dtype=tf.uint8)
         self.processed = tf.image.rgb_to_grayscale(self.frame)
-        # self.processed = tf.image.crop_to_bounding_box(self.processed, 34, 0, 160, 160)
-        # self.processed = tf.image.resize_images(self.processed,
-        #                                         [self.frame_height, self.frame_width],
-        #                                         method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
     def process(self, session, frame):
         """
         Args:
             session: A Tensorflow session object
-            frame: A (210, 160, 3) frame of an Env game in RGB
+            frame: A (84, 84, 3) frame of an Env game in BGR
         Returns:
             A processed (84, 84, 1) frame in grayscale
         """
@@ -344,17 +337,36 @@ def generate_gif(frame_number, frames_for_gif, reward, path):
     """
         Args:
             frame_number: Integer, determining the number of the current frame
-            frames_for_gif: A sequence of (210, 160, 3) frames of an Env game in RGB
+            frames_for_gif: A sequence of (84, 84, 3) frames of an Env game in RGB
             reward: Integer, Total reward of the episode that es ouputted as a gif
             path: String, path where gif is saved
     """
     for idx, frame_idx in enumerate(frames_for_gif):
-        frames_for_gif[idx] = resize(frame_idx, (420, 320, 3),
+        frames_for_gif[idx] = resize(frame_idx, (320, 320, 3),
                                      preserve_range=True, order=0).astype(np.uint8)
 
     imageio.mimsave(f'{path}{"ATARI_frame_{0}_reward_{1}.gif".format(frame_number, reward)}',
                     frames_for_gif, duration=1/30)
 
+
+def generate_movie(frame_number, clip, reward, path):
+    """
+        Args:
+            frame_number: Integer, determining the number of the current frame
+            clip: A sequence of (84, 84, 3) frames of an Env game in RGB
+            reward: Integer, Total reward of the episode that es ouputted as a gif
+            path: String, path where gif is saved
+            fourcc_str : str, to retrieve fourcc from opencv
+            fps : float, frame rate of create video-stream
+    """
+    for idx, frame_idx in enumerate(clip):
+        clip[idx] = resize(frame_idx, (320, 320, 3), preserve_range=True, order=0).astype(np.uint8)
+    for idx, frame_idx in enumerate(clip):
+        clip[idx] = cv2.cvtColor(frame_idx, cv2.COLOR_BGR2RGB)
+    #image = cv2.cvtColor(clip[i], cv2.COLOR_BGR2RGB))
+
+    fps = 20
+    imageio.mimwrite('./test.mp4', clip, fps=fps)
 
 class Env:
     """Wrapper for the imported environment"""
@@ -615,13 +627,8 @@ if TEST:
     gif_path = "GIF/"
     os.makedirs(gif_path,exist_ok=True)
 
-    if ENV_NAME == 'BreakoutDeterministic-v4':
-        trained_path = "trained/breakout/"
-        save_file = "my_model-15845555.meta"
-
-    elif ENV_NAME == 'PongDeterministic-v4':
-        trained_path = "trained/pong/"
-        save_file = "my_model-3217770.meta"
+    trained_path = "output/"
+    save_file = "my_model-4320000.meta"
 
     action_getter = ActionGetter(sim_env.env.actions,
                                  replay_memory_start_size=REPLAY_MEMORY_START_SIZE,
@@ -633,18 +640,20 @@ if TEST:
         frames_for_gif = []
         terminal_live_lost = sim_env.reset(sess, evaluation = True)
         episode_reward_sum = 0
+        action = 1
+        k = 0
+        processed_new_frame, reward, terminal, terminal_live_lost, new_frame = sim_env.step(sess, action)
         while True:
-            sim_env.env.render()
-            action = 1 if terminal_live_lost else action_getter.get_action(sess, 0, sim_env.state,
-                                                                           MAIN_DQN,
-                                                                           evaluation = True)
+            k += 1
+            action = action_getter.get_action(sess,0, sim_env.state, MAIN_DQN, evaluation = True)
             processed_new_frame, reward, terminal, terminal_live_lost, new_frame = sim_env.step(sess, action)
             episode_reward_sum += reward
             frames_for_gif.append(new_frame)
-            if terminal == True:
+            if k > 6000:
                 break
 
         print("The total reward is {}".format(episode_reward_sum))
-        print("Creating gif...")
-        generate_gif(0, frames_for_gif, episode_reward_sum, gif_path)
-        print("Gif created, check the folder {}".format(gif_path))
+        print("Creating movie...")
+        # generate_gif(0, frames_for_gif, episode_reward_sum, gif_path)
+        generate_movie(1, frames_for_gif, episode_reward_sum, gif_path)
+        print("Movie created created:")
