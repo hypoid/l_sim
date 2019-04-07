@@ -363,10 +363,10 @@ def generate_movie(frame_number, clip, reward, path):
         clip[idx] = resize(frame_idx, (320, 320, 3), preserve_range=True, order=0).astype(np.uint8)
     for idx, frame_idx in enumerate(clip):
         clip[idx] = cv2.cvtColor(frame_idx, cv2.COLOR_BGR2RGB)
-    #image = cv2.cvtColor(clip[i], cv2.COLOR_BGR2RGB))
 
+    filename = f'./demos/frame_{frame_number}_reward_{reward}.mp4'
     fps = 20
-    imageio.mimwrite('./test.mp4', clip, fps=fps)
+    imageio.mimwrite(filename, clip, fps=fps)
 
 class Env:
     """Wrapper for the imported environment"""
@@ -649,11 +649,10 @@ if TEST:
             processed_new_frame, reward, terminal, terminal_live_lost, new_frame = sim_env.step(sess, action)
             episode_reward_sum += reward
             frames_for_gif.append(new_frame)
-            if k > 6000:
+            if k > 600:
                 break
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
-        # generate_gif(0, frames_for_gif, episode_reward_sum, gif_path)
-        generate_movie(1, frames_for_gif, episode_reward_sum, gif_path)
+        generate_movie(0, frames_for_gif, episode_reward_sum, gif_path)
         print("Movie created created:")

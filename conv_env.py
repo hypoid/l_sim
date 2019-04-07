@@ -110,30 +110,6 @@ class MyApp(ShowBase):
         self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
         self.world.attachGhost(self.rzone_ghost)
 
-        # Needed for camera image
-        #self.dr = self.camNode.getDisplayRegion(0)
-
-        # # Needed for camera depth image
-        # winprops = WindowProperties.size(self.win.getXSize(), self.win.getYSize())
-        # fbprops = FrameBufferProperties()
-        # fbprops.setDepthBits(1)
-        # self.depthBuffer = self.graphicsEngine.makeOutput(
-        #     self.pipe, "depth buffer", -2,
-        #     fbprops, winprops,
-        #     GraphicsPipe.BFRefuseWindow,
-        #     self.win.getGsg(), self.win)
-        # self.depthTex = Texture()
-        # self.depthTex.setFormat(Texture.FDepthComponent)
-        # self.depthBuffer.addRenderTexture(self.depthTex,
-        #     GraphicsOutput.RTMCopyRam, GraphicsOutput.RTPDepth)
-        # lens = self.cam.node().getLens()
-        # # the near and far clipping distances can be changed if desired
-        # # lens.setNear(5.0)
-        # # lens.setFar(500.0)
-        # self.depthCam = self.makeCamera(self.depthBuffer,
-        #     lens=lens,
-        #     scene=render)
-        # self.depthCam.reparentTo(self.cam)
 
     def reset(self):
         namelist = ['Ground',
@@ -188,7 +164,10 @@ class MyApp(ShowBase):
 
         self.blocks = []
         for block_num in range(15):
-            new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0))
+            # new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
+            #                              2, random.randint(4, 6), random.randint(12, 24))
+            new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
+                                         2, 4, 24)
             self.blocks.append(new_block)
 
         self.have_scramble = False
@@ -202,23 +181,24 @@ class MyApp(ShowBase):
         return self.step(1)[0]
 
 
-    def spawn_block(self, location):
+    def spawn_block(self, location, z_inches, y_inches, x_inches):
+        """
+        Spawns a block
+        """
         node = BulletRigidBodyNode('Block')
         node.setFriction(1.0)
         block_np = self.render.attachNewNode(node)
-        # block_np.setAntialias(AntialiasAttrib.MMultisample)
         shape = BulletBoxShape(Vec3(0.0254*4, 0.0254*24, 0.0254*2))
         node.setMass(1.0)
-        #block_np.setPos(-3.7, 0.0, 2.0)
         block_np.setPos(location)
         block_np.setHpr(random.uniform(-60, 60), 0.0, 0.0)
         node.addShape(shape)
         self.world.attachRigidBody(node)
         model = loader.loadModel('assets/bullet-samples/models/box.egg')
         model.setH(90)
-        model.setSy(0.0254*4*2)
-        model.setSx(0.0254*24*2)
-        model.setSz(0.0254*2*2)
+        model.setSx(0.0254*x_inches*2)
+        model.setSy(0.0254*y_inches*2)
+        model.setSz(0.0254*z_inches*2)
         model.flattenLight()
         model.reparentTo(block_np)
         block_np.node().setTag('scrambled', 'False')
