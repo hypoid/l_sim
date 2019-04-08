@@ -1,5 +1,5 @@
 TRAIN = True
-TEST = False
+TEST = True
 
 
 """
@@ -604,7 +604,7 @@ def train():
             eval_rewards.append(episode_reward_sum)
             print("Evaluation score:\n", np.mean(eval_rewards))
             try:
-                generate_gif(frame_number, frames_for_gif, eval_rewards[0], PATH)
+                generate_movie(frame_number, frames_for_gif, eval_rewards[0], PATH)
             except IndexError:
                 print("No evaluation game finished")
 
@@ -650,10 +650,10 @@ if TEST:
             processed_new_frame, reward, terminal, terminal_live_lost, new_frame = sim_env.step(sess, action)
             episode_reward_sum += reward
             frames_for_gif.append(new_frame)
-            if k > 600:
+            if k > 6000:
                 break
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
-        generate_movie(0, frames_for_gif, episode_reward_sum, gif_path)
+        generate_movie(3, frames_for_gif, episode_reward_sum, gif_path)
         print("Movie created created:")

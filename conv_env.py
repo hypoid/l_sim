@@ -31,41 +31,52 @@ from panda3d.core import Camera
 from panda3d.core import NodePath
 from panda3d.core import TransformState
 from panda3d.core import RenderState
+from panda3d.core import KeyboardButton
 import  memory_profiler
 
-loadPrcFileData('', 'show-frame-rate-meter true')
 loadPrcFileData('', 'sync-video 0')
-loadPrcFileData('', 'window-type none')
+if __name__ != '__main__':
+    loadPrcFileData('', 'window-type none')
+    loadPrcFileData('', 'show-frame-rate-meter false')
+else:
+    loadPrcFileData('', 'show-frame-rate-meter true')
 # loadPrcFileData('', 'state-cache false')
 # loadPrcFileData('', 'transform-cache false')
 
 
 
 class MyApp(ShowBase):
-    def __init__(self, screen_size=84, DEBUGGING=False):
+    def __init__(self, screen_size=84, DEBUGGING=False, human_playable=False):
         ShowBase.__init__(self)
-        self.render_stuff = True
+        self.forward_button = KeyboardButton.ascii_key(b'w')
+        self.backward_button = KeyboardButton.ascii_key(b's')
+
+        self.fps = 20
+        self.human_playable = human_playable
         self.actions = 3
+        self.last_frame_start_time = time.time()
 
-        winprops = WindowProperties.size(screen_size, screen_size)
-        fbprops = FrameBufferProperties()
-        fbprops.set_rgba_bits(8, 8, 8, 0)
-        fbprops.set_depth_bits(24)
-        self.pipe = GraphicsPipeSelection.get_global_ptr().make_module_pipe('pandagl')
-        self.imageBuffer = self.graphicsEngine.makeOutput(
-            self.pipe,
-            "image buffer",
-            1,
-            fbprops,
-            winprops,
-            GraphicsPipe.BFRefuseWindow)
+        if self.human_playable is False:
+            winprops = WindowProperties.size(screen_size, screen_size)
+            fbprops = FrameBufferProperties()
+            fbprops.set_rgba_bits(8, 8, 8, 0)
+            fbprops.set_depth_bits(24)
+            self.pipe = GraphicsPipeSelection.get_global_ptr().make_module_pipe('pandagl')
+            self.imageBuffer = self.graphicsEngine.makeOutput(
+                self.pipe,
+                "image buffer",
+                1,
+                fbprops,
+                winprops,
+                GraphicsPipe.BFRefuseWindow)
 
-        self.camera = Camera('cam')
-        self.cam = NodePath(self.camera)
-        self.cam.reparentTo(self.render)
 
-        self.dr = self.imageBuffer.makeDisplayRegion()
-        self.dr.setCamera(self.cam)
+            self.camera = Camera('cam')
+            self.cam = NodePath(self.camera)
+            self.cam.reparentTo(self.render)
+
+            self.dr = self.imageBuffer.makeDisplayRegion()
+            self.dr.setCamera(self.cam)
 
         self.render.setShaderAuto()
         self.cam.setPos(0, 0, 7)
@@ -109,6 +120,16 @@ class MyApp(ShowBase):
         self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
         self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
         self.world.attachGhost(self.rzone_ghost)
+
+        self.finger_speed_mps = 0.0
+        self.have_scramble = False
+        self.penalty_applied = False
+        self.spawnned = False
+        self.score = 10
+        self.teleport_cooled_down = True
+        self.fps = 20
+        self.framecount = 0
+        self.reset()
 
 
     def reset(self):
@@ -164,12 +185,13 @@ class MyApp(ShowBase):
 
         self.blocks = []
         for block_num in range(15):
-            # new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
-            #                              2, random.randint(4, 6), random.randint(12, 24))
             new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
-                                         2, 4, 24)
+                                         2, random.choice([4, 6]), random.randint(12, 24))
+            # new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
+            #                              2, 4, 24)
             self.blocks.append(new_block)
 
+        self.finger_speed_mps = 0.0
         self.have_scramble = False
         self.penalty_applied = False
         self.spawnned = False
@@ -287,30 +309,51 @@ class MyApp(ShowBase):
         self.framecount += 1
         finger_meters_per_second = 2
         max_dist = 1.1
-        real_displacement = finger_meters_per_second * dt
         # Move finger
+        finger_accel = 2.0
+        finger_deccel = 2.0
+
+
         if action == 0:
-            self.finger_np.setY(self.finger_np.getY() + real_displacement)
-            if self.finger_np.getY() > max_dist:
-                self.finger_np.setY(max_dist)
-
+            self.finger_speed_mps += dt * finger_accel
+            if self.finger_speed_mps > 2:
+                self.finger_speed_mps = 2
+        if action == 1:
+            if self.finger_speed_mps > 0.01:
+                self.finger_speed_mps -= finger_deccel * dt
+            if self.finger_speed_mps < 0.01:
+                self.finger_speed_mps += finger_deccel * dt
         if action == 2:
-            self.finger_np.setY(self.finger_np.getY() - real_displacement)
-            if self.finger_np.getY() < -max_dist:
-                self.finger_np.setY(-max_dist)
+            self.finger_speed_mps -= dt * finger_accel
+            if self.finger_speed_mps < -2:
+                self.finger_speed_mps = -2
 
-        self.world.doPhysics(dt, 5, 1.0/120.0)
+        real_displacement = self.finger_speed_mps * dt
+        self.finger_np.setY(self.finger_np.getY() + real_displacement)
+
+        if self.finger_np.getY() > max_dist:
+            self.finger_np.setY(max_dist)
+            self.finger_speed_mps = 0
+        if self.finger_np.getY() < -max_dist:
+            self.finger_np.setY(-max_dist)
+            self.finger_speed_mps = 0
+
+
+        # self.world.doPhysics(dt, 5, 1.0/120.0)
+        self.world.doPhysics(dt, 5, 1.0/180.0)
         self.reset_conv()
-        self.check_teleportable(blocks_per_minute=1.1*60)
+        self.check_teleportable(blocks_per_minute=70)
 
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
 
-        self.graphicsEngine.renderFrame()
-        TransformState.garbageCollect()
-        RenderState.garbageCollect()
-        image = self.get_camera_image()
-        # image = cv2.resize(image, (84, 84), interpolation=cv2.INTER_CUBIC)
+        if self.human_playable is False:
+            self.graphicsEngine.renderFrame()
+            TransformState.garbageCollect()
+            RenderState.garbageCollect()
+            image = self.get_camera_image()
+        else:
+            image = None
 
         score = 0
         score += self.check_rewards()
@@ -318,36 +361,24 @@ class MyApp(ShowBase):
 
         return image, score, done
 
-
-def main():
-    cv2.namedWindow('state', flags=cv2.WINDOW_NORMAL)
-    app = MyApp(screen_size=84*1)
-    num_episodes = 5000
-    max_epLength = 10000
-    app.reset()
-    for ep_number in range(num_episodes):
-        for i in range(100):
-            image,s,done = app.step(0)
-        score = 0
-        f = 0
+    def update(self, task):
+        is_down = self.mouseWatcherNode.is_button_down
         next_act = 1
-        for step_num in range(max_epLength):
-            image, s, done = app.step(next_act)
-            if s != 0:
-                print(s)
-            score += s
-            f += 1
-            cv2.imshow('state', image)
-            key = cv2.waitKey(50) & 0xFF
-            if key == 27 or key == ord('q'):
-                print("Pressed ESC or q, exiting")
-                exit()
-            elif key == 119:
-                next_act = 0
-            elif key == 115:
-                next_act = 2
-            else:
-                next_act = 1
-        print((ep_number+1)*max_epLength, score)
+        if is_down(self.forward_button):
+            next_act = 0
+        if is_down(self.backward_button):
+            next_act = 2
+        _, reward, _ = self.step(next_act)
+        if reward != 0:
+            print(reward)
+        last_frame_duration = time.time() - self.last_frame_start_time
+        if last_frame_duration < (1/self.fps):
+            time.sleep((1/self.fps) - last_frame_duration)
+        self.last_frame_start_time = time.time()
+        return task.cont
 
-if __name__ == '__main__': main()
+
+if __name__ == '__main__':
+    app = MyApp(screen_size=84*8, human_playable=True)
+    app.taskMgr.add(app.update, 'update')
+    app.run()
