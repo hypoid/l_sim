@@ -55,6 +55,7 @@ class MyApp(ShowBase):
         self.human_playable = human_playable
         self.actions = 3
         self.last_frame_start_time = time.time()
+        self.action_buffer = [1, 1, 1]
 
         if self.human_playable is False:
             winprops = WindowProperties.size(screen_size, screen_size)
@@ -79,8 +80,8 @@ class MyApp(ShowBase):
             self.dr.setCamera(self.cam)
 
         self.render.setShaderAuto()
-        self.cam.setPos(0, 0, 7)
-        self.cam.lookAt(0, 0, 0)
+        self.cam.setPos(0.5, 0, 6)
+        self.cam.lookAt(0.5, 0, 0)
 
         # Create Ambient Light
         self.ambientLight = AmbientLight('ambientLight')
@@ -112,20 +113,8 @@ class MyApp(ShowBase):
             debugNP.show()
             self.world.setDebugNode(debugNP.node())
 
-        # Reward zone
-        self.rzone_shape = BulletBoxShape(Vec3(.8, 1, 0.5))
-        self.rzone_ghost = BulletGhostNode('Reward Zone')
-        self.rzone_ghost.addShape(self.rzone_shape)
-        self.rzone_ghostNP = self.render.attachNewNode(self.rzone_ghost)
-        self.rzone_ghostNP.setPos(2.2, 0.0, 0.86)
-        self.rzone_ghostNP.setCollideMask(BitMask32(0x0f))
-        self.world.attachGhost(self.rzone_ghost)
-
         self.finger_speed_mps = 0.0
-        self.have_scramble = False
         self.penalty_applied = False
-        self.spawnned = False
-        self.score = 10
         self.teleport_cooled_down = True
         self.fps = 20
         self.framecount = 0
@@ -186,16 +175,28 @@ class MyApp(ShowBase):
         self.blocks = []
         for block_num in range(15):
             new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
-                                         2, random.choice([4, 6]), random.randint(12, 24))
+                                         2, random.choice([4, 4,
+                                                           6]), random.choice([10,
+                                                                                     11,
+                                                                                     12,
+                                                                                     13,
+                                                                                     14,
+                                                                                     15, 15,
+                                                                                     16, 16,
+                                                                                     17, 17,
+                                                                                     18, 18, 18, 18,
+                                                                                     19, 19, 19, 19,
+                                                                                     20, 20, 20, 20, 20,
+                                                                                     21, 21, 21, 21,
+                                                                                     22, 22, 22, 23,
+                                                                                     23, 23, 23, 23,
+                                                                                     24]))
             # new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
             #                              2, 4, 24)
             self.blocks.append(new_block)
 
         self.finger_speed_mps = 0.0
-        self.have_scramble = False
         self.penalty_applied = False
-        self.spawnned = False
-        self.score = 10
         self.teleport_cooled_down = True
         self.fps = 20
         self.framecount = 0
@@ -210,7 +211,7 @@ class MyApp(ShowBase):
         node = BulletRigidBodyNode('Block')
         node.setFriction(1.0)
         block_np = self.render.attachNewNode(node)
-        shape = BulletBoxShape(Vec3(0.0254*4, 0.0254*24, 0.0254*2))
+        shape = BulletBoxShape(Vec3(0.0254*y_inches, 0.0254*x_inches, 0.0254*z_inches))
         node.setMass(1.0)
         block_np.setPos(location)
         block_np.setHpr(random.uniform(-60, 60), 0.0, 0.0)
@@ -250,40 +251,23 @@ class MyApp(ShowBase):
         if conveyor_dist_left < 10:
             self.conv_np.setX(-95.0)
             self.conv_np.setY(0.0)
-        # self.conv_np.setY(0.0)
-        # self.conv_np.setHpr(0.0, 0.0, 0.0)
 
 
     def check_rewards(self):
         reward = 0
-        # Check for reward blocks (recently cleared scrambles)
-        rzone_ghost = self.rzone_ghostNP.node()
-        scrambled = False
-        for node in rzone_ghost.getOverlappingNodes():
-            if node.name == 'Block':
-                node.setTag('scrambled', 'True')
-                scrambled = True
-
-        # Delete flags for blocks that are not eligable for reward due to being too late
         for block in self.blocks:
-            block_x = block.getPos()[0]
-            block_scrambled = block.node().getTag('scrambled')
-            if block_x > 2.4 and block_scrambled == 'True':
-                self.have_scramble = False
-                scrambled = False
+            block_x, block_y, block_z = block.getPos()
+            if block_z > 0.16 and block_x > -1 and block_x < 0:
+                block.node().setTag('scrambled', 'True')
+            if block_x < 2.3 and block_z < 0.16 and block.node().getTag('scrambled') == 'True':
                 block.node().setTag('scrambled', 'False')
-
-        if scrambled is True:
-            self.have_scramble = True
-        else:
-            if self.have_scramble is True:
                 reward = 1
-                self.have_scramble = False
+
         return reward
 
     def check_teleportable(self, blocks_per_minute):
         self.time = self.framecount/self.fps
-        if self.time % (1/(blocks_per_minute/60)) < 0.1:
+        if self.time % (1/(blocks_per_minute/60)) < 1:
             self.time_to_teleport = True
         else:
             self.time_to_teleport = False
@@ -292,17 +276,13 @@ class MyApp(ShowBase):
         for block in self.blocks:
             block_x = block.getPos()[0]
             if block_x > 5:
-                block_scrambled = block.node().getTag('scrambled')
-                if block_scrambled == 'True':
-                    self.have_scramble = False
-                    block.node().setTag('scrambled', 'False')
+                block.node().setTag('scrambled', 'False')
                 if self.time_to_teleport is True and self.teleport_cooled_down is True:
                     self.teleport_cooled_down = False
                     block.setX(-4)
                     block.setY(0.0)
                     block.setZ(2.0)
                     block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
-
 
     def step(self, action):
         dt = 1/self.fps
@@ -312,6 +292,9 @@ class MyApp(ShowBase):
         # Move finger
         finger_accel = 2.0
         finger_deccel = 2.0
+        self.action_buffer.pop(0)
+        self.action_buffer.append(action)
+        action = self.action_buffer[0]
 
 
         if action == 0:
@@ -321,7 +304,7 @@ class MyApp(ShowBase):
         if action == 1:
             if self.finger_speed_mps > 0.01:
                 self.finger_speed_mps -= finger_deccel * dt
-            if self.finger_speed_mps < 0.01:
+            if self.finger_speed_mps < -0.01:
                 self.finger_speed_mps += finger_deccel * dt
         if action == 2:
             self.finger_speed_mps -= dt * finger_accel
@@ -342,7 +325,7 @@ class MyApp(ShowBase):
         # self.world.doPhysics(dt, 5, 1.0/120.0)
         self.world.doPhysics(dt, 5, 1.0/180.0)
         self.reset_conv()
-        self.check_teleportable(blocks_per_minute=70)
+        self.check_teleportable(blocks_per_minute=50)
 
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
