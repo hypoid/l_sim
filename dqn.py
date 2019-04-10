@@ -350,7 +350,7 @@ def generate_gif(frame_number, frames_for_gif, reward, path):
                     frames_for_gif, duration=1/30)
 
 
-def generate_movie(frame_number, clip, reward, path):
+def generate_movie(file_name, clip, reward, path):
     """
         Args:
             frame_number: Integer, determining the number of the current frame
@@ -365,7 +365,7 @@ def generate_movie(frame_number, clip, reward, path):
     for idx, frame_idx in enumerate(clip):
         clip[idx] = cv2.cvtColor(frame_idx, cv2.COLOR_BGR2RGB)
 
-    filename = f'./demos/frame_{frame_number}_reward_{reward}.mp4'
+    filename = file_name
     fps = 20
     imageio.mimwrite(filename, clip, fps=fps)
 
@@ -450,7 +450,7 @@ BS = 32                          # Batch size
 
 PATH = "output/"                 # Gifs and checkpoints will be saved here
 SUMMARIES = "summaries"          # logdir for tensorboard
-RUNID = 'run_1'
+RUNID = 'run_2'
 os.makedirs(PATH, exist_ok=True)
 os.makedirs(os.path.join(SUMMARIES, RUNID), exist_ok=True)
 SUMM_WRITER = tf.summary.FileWriter(os.path.join(SUMMARIES, RUNID))
@@ -575,6 +575,10 @@ def train():
             eval_rewards = []
             evaluate_frame_number = 0
 
+            action = 1
+            for _ in range(200):
+                processed_new_frame, reward, terminal, terminal_life_lost, new_frame = sim_env.step(sess, action)
+
             for _ in range(EVAL_STEPS):
                 if terminal:
                     terminal_life_lost = sim_env.reset(sess, evaluation=True)
@@ -591,8 +595,8 @@ def train():
                 processed_new_frame, reward, terminal, terminal_life_lost, new_frame = sim_env.step(sess, action)
                 evaluate_frame_number += 1
                 episode_reward_sum += reward
-                # Only save the first 300 frames of the first run
-                if evaluate_frame_number > 300 and gif is True:
+                # Only save the first 600 frames of the first run
+                if evaluate_frame_number > 600 and gif is True:
                     terminal = True
 
                 if gif:
@@ -604,7 +608,7 @@ def train():
             eval_rewards.append(episode_reward_sum)
             print("Evaluation score:\n", np.mean(eval_rewards))
             try:
-                generate_movie(frame_number, frames_for_gif, eval_rewards[0], PATH)
+                generate_movie(f'demos/run_2/{evaluate_frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
             except IndexError:
                 print("No evaluation game finished")
 
@@ -629,7 +633,7 @@ if TEST:
     os.makedirs(gif_path,exist_ok=True)
 
     trained_path = "output/"
-    save_file = "my_model-4320000.meta"
+    save_file = "my_model-8856000.meta"
 
     action_getter = ActionGetter(sim_env.env.actions,
                                  replay_memory_start_size=REPLAY_MEMORY_START_SIZE,
@@ -655,5 +659,4 @@ if TEST:
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
-        generate_movie(3, frames_for_gif, episode_reward_sum, gif_path)
-        print("Movie created created:")
+        generate_movie('showcase/run_2.mp4', frames_for_gif, episode_reward_sum, gif_path)
