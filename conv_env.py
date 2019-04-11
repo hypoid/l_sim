@@ -55,7 +55,7 @@ class MyApp(ShowBase):
         self.human_playable = human_playable
         self.actions = 3
         self.last_frame_start_time = time.time()
-        self.action_buffer = [1, 1]
+        self.action_buffer = [1, 1, 1]
         self.last_teleport_time = 0.0
         self.time_to_teleport = False
 
