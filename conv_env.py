@@ -55,7 +55,9 @@ class MyApp(ShowBase):
         self.human_playable = human_playable
         self.actions = 3
         self.last_frame_start_time = time.time()
-        self.action_buffer = [1, 1, 1]
+        self.action_buffer = [1, 1]
+        self.last_teleport_time = 0.0
+        self.time_to_teleport = False
 
         if self.human_playable is False:
             winprops = WindowProperties.size(screen_size, screen_size)
@@ -174,7 +176,7 @@ class MyApp(ShowBase):
 
         self.blocks = []
         for block_num in range(15):
-            new_block = self.spawn_block(Vec3(18, 0, (0.2 * block_num) + 2.0),
+            new_block = self.spawn_block(Vec3(28, random.uniform(-3, 3), (0.2 * block_num) + 2.0),
                                          2, random.choice([4, 4,
                                                            6]), random.choice([10,
                                                                                      11,
@@ -200,6 +202,8 @@ class MyApp(ShowBase):
         self.teleport_cooled_down = True
         self.fps = 20
         self.framecount = 0
+        self.last_teleport_time = 0.0
+        self.time_to_teleport = False
 
         return self.step(1)[0]
 
@@ -267,19 +271,25 @@ class MyApp(ShowBase):
 
     def check_teleportable(self, blocks_per_minute):
         self.time = self.framecount/self.fps
-        if self.time % (1/(blocks_per_minute/60)) < 1:
+
+        # if self.time % (1/(blocks_per_minute/60)) < 0.1:
+        #     self.time_to_teleport = True
+        # else:
+        #     self.time_to_teleport = False
+        #     self.teleport_cooled_down = True
+        teleport_cooled_down = True if self.last_teleport_time + 0.4 < self.time else False
+        if random.choice([True,
+                          False, False, False]) and teleport_cooled_down:
+            self.last_teleport_time = self.time
             self.time_to_teleport = True
-        else:
-            self.time_to_teleport = False
-            self.teleport_cooled_down = True
 
         for block in self.blocks:
             block_x = block.getPos()[0]
             if block_x > 5:
                 block.node().setTag('scrambled', 'False')
-                if self.time_to_teleport is True and self.teleport_cooled_down is True:
-                    self.teleport_cooled_down = False
-                    block.setX(-4)
+                if self.time_to_teleport is True:
+                    self.time_to_teleport = False
+                    block.setX(-3)
                     block.setY(0.0)
                     block.setZ(2.0)
                     block.setHpr(random.uniform(-60, 60), 0.0, 0.0)
@@ -287,11 +297,11 @@ class MyApp(ShowBase):
     def step(self, action):
         dt = 1/self.fps
         self.framecount += 1
-        finger_meters_per_second = 2
         max_dist = 1.1
         # Move finger
-        finger_accel = 2.0
-        finger_deccel = 2.0
+        finger_max_speed = 2
+        finger_accel = 10.0
+        finger_deccel = 10.0
         self.action_buffer.pop(0)
         self.action_buffer.append(action)
         action = self.action_buffer[0]
@@ -299,7 +309,7 @@ class MyApp(ShowBase):
 
         if action == 0:
             self.finger_speed_mps += dt * finger_accel
-            if self.finger_speed_mps > 2:
+            if self.finger_speed_mps > finger_max_speed:
                 self.finger_speed_mps = 2
         if action == 1:
             if self.finger_speed_mps > 0.01:
@@ -308,8 +318,8 @@ class MyApp(ShowBase):
                 self.finger_speed_mps += finger_deccel * dt
         if action == 2:
             self.finger_speed_mps -= dt * finger_accel
-            if self.finger_speed_mps < -2:
-                self.finger_speed_mps = -2
+            if self.finger_speed_mps < -finger_max_speed:
+                self.finger_speed_mps = -finger_max_speed
 
         real_displacement = self.finger_speed_mps * dt
         self.finger_np.setY(self.finger_np.getY() + real_displacement)
@@ -325,7 +335,7 @@ class MyApp(ShowBase):
         # self.world.doPhysics(dt, 5, 1.0/120.0)
         self.world.doPhysics(dt, 5, 1.0/180.0)
         self.reset_conv()
-        self.check_teleportable(blocks_per_minute=50)
+        self.check_teleportable(blocks_per_minute=59)
 
         # Keep the conveyor moving
         self.conv_np.node().setLinearVelocity(Vec3(1.0, 0.0, 0.0))
