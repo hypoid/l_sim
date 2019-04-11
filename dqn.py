@@ -1,4 +1,4 @@
-TRAIN = True
+TRAIN = False
 TEST = True
 
 
@@ -468,7 +468,7 @@ with tf.variable_scope('targetDQN'):
     TARGET_DQN = DQN(sim_env.env.actions, HIDDEN)               # (★★)
 
 init = tf.global_variables_initializer()
-saver = tf.train.Saver()
+saver = tf.train.Saver(save_relative_paths=True)
 
 MAIN_DQN_VARS = tf.trainable_variables(scope='mainDQN')
 TARGET_DQN_VARS = tf.trainable_variables(scope='targetDQN')
@@ -634,15 +634,15 @@ if TEST:
     gif_path = "GIF/"
     os.makedirs(gif_path,exist_ok=True)
 
-    trained_path = 'models/{RUNID}/'
-    save_file = "my_model-6000000.meta"
+    trained_path = f'models/{RUNID}/'
+    save_file = "my_model-3240000.meta"
 
     action_getter = ActionGetter(sim_env.env.actions,
                                  replay_memory_start_size=REPLAY_MEMORY_START_SIZE,
                                  max_frames=MAX_FRAMES)
 
     with tf.Session() as sess:
-        saver = tf.train.import_meta_graph(trained_path+save_file)
+        saver = tf.train.import_meta_graph(trained_path+save_file, save_relative_paths=True)
         saver.restore(sess,tf.train.latest_checkpoint(trained_path))
         frames_for_gif = []
         terminal_live_lost = sim_env.reset(sess, evaluation = True)
@@ -661,4 +661,4 @@ if TEST:
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
-        generate_movie('showcase/{RUNID}.mp4', frames_for_gif, episode_reward_sum, gif_path)
+        generate_movie(f'showcase/{RUNID}.mp4', frames_for_gif, episode_reward_sum, gif_path)
