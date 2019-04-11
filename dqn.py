@@ -433,7 +433,7 @@ NETW_UPDATE_FREQ = 10000         # Number of chosen actions between updating the
 DISCOUNT_FACTOR = 0.99           # gamma in the Bellman equation
 REPLAY_MEMORY_START_SIZE = 50000 # Number of completely random actions, 
                                  # before the agent starts learning
-MAX_FRAMES = 30000000            # Total number of frames the agent sees 
+MAX_FRAMES = 6000000             # Total number of frames the agent sees 
 MEMORY_SIZE = 1000000            # Number of transitions stored in the replay memory
 NO_OP_STEPS = 10                 # Number of 'NOOP' or 'FIRE' actions at the beginning of an 
                                  # evaluation episode
@@ -448,9 +448,10 @@ LEARNING_RATE = 0.00001          # Set to 0.00025 in Pong for quicker results.
                                  # Hessel et al. 2017 used 0.0000625
 BS = 32                          # Batch size
 
-PATH = "output/"                 # Gifs and checkpoints will be saved here
 SUMMARIES = "summaries"          # logdir for tensorboard
-RUNID = 'run_2'
+RUNID = 'run_3'
+PATH = f'models/{RUNID}/'        # checkpoints will be saved here
+
 os.makedirs(PATH, exist_ok=True)
 os.makedirs(os.path.join(SUMMARIES, RUNID), exist_ok=True)
 SUMM_WRITER = tf.summary.FileWriter(os.path.join(SUMMARIES, RUNID))
@@ -607,8 +608,9 @@ def train():
 
             eval_rewards.append(episode_reward_sum)
             print("Evaluation score:\n", np.mean(eval_rewards))
+            os.makedirs('demos/{RUNID}/',exist_ok=True)
             try:
-                generate_movie(f'demos/run_2/{evaluate_frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
+                generate_movie(f'demos/{RUNID}/{evaluate_frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
             except IndexError:
                 print("No evaluation game finished")
 
@@ -632,8 +634,8 @@ if TEST:
     gif_path = "GIF/"
     os.makedirs(gif_path,exist_ok=True)
 
-    trained_path = "output/"
-    save_file = "my_model-8856000.meta"
+    trained_path = 'models/{RUNID}/'
+    save_file = "my_model-6000000.meta"
 
     action_getter = ActionGetter(sim_env.env.actions,
                                  replay_memory_start_size=REPLAY_MEMORY_START_SIZE,
@@ -659,4 +661,4 @@ if TEST:
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
-        generate_movie('showcase/run_2.mp4', frames_for_gif, episode_reward_sum, gif_path)
+        generate_movie('showcase/{RUNID}.mp4', frames_for_gif, episode_reward_sum, gif_path)
