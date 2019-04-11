@@ -642,7 +642,7 @@ if TEST:
                                  max_frames=MAX_FRAMES)
 
     with tf.Session() as sess:
-        saver = tf.train.import_meta_graph(trained_path+save_file, save_relative_paths=True)
+        saver = tf.train.import_meta_graph(trained_path+save_file)
         saver.restore(sess,tf.train.latest_checkpoint(trained_path))
         frames_for_gif = []
         terminal_live_lost = sim_env.reset(sess, evaluation = True)
