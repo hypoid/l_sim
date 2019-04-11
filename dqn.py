@@ -1,4 +1,4 @@
-TRAIN = False
+TRAIN = True
 TEST = True
 
 
@@ -610,7 +610,7 @@ def train():
             print("Evaluation score:\n", np.mean(eval_rewards))
             os.makedirs('demos/{RUNID}/',exist_ok=True)
             try:
-                generate_movie(f'demos/{RUNID}/{evaluate_frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
+                generate_movie(f'demos/{RUNID}/{frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
             except IndexError:
                 print("No evaluation game finished")
 
@@ -661,4 +661,5 @@ if TEST:
 
         print("The total reward is {}".format(episode_reward_sum))
         print("Creating movie...")
+        os.makedirs('showcase/',exist_ok=True)
         generate_movie(f'showcase/{RUNID}.mp4', frames_for_gif, episode_reward_sum, gif_path)
