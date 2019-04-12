@@ -433,7 +433,7 @@ NETW_UPDATE_FREQ = 10000         # Number of chosen actions between updating the
 DISCOUNT_FACTOR = 0.99           # gamma in the Bellman equation
 REPLAY_MEMORY_START_SIZE = 50000 # Number of completely random actions, 
                                  # before the agent starts learning
-MAX_FRAMES = 6000000             # Total number of frames the agent sees 
+MAX_FRAMES = 10000000             # Total number of frames the agent sees 
 MEMORY_SIZE = 1000000            # Number of transitions stored in the replay memory
 NO_OP_STEPS = 10                 # Number of 'NOOP' or 'FIRE' actions at the beginning of an 
                                  # evaluation episode
@@ -449,7 +449,7 @@ LEARNING_RATE = 0.00001          # Set to 0.00025 in Pong for quicker results.
 BS = 32                          # Batch size
 
 SUMMARIES = "summaries"          # logdir for tensorboard
-RUNID = 'run_3'
+RUNID = 'run_4'
 PATH = f'models/{RUNID}/'        # checkpoints will be saved here
 
 os.makedirs(PATH, exist_ok=True)
