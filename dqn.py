@@ -608,7 +608,7 @@ def train():
 
             eval_rewards.append(episode_reward_sum)
             print("Evaluation score:\n", np.mean(eval_rewards))
-            os.makedirs('demos/{RUNID}/',exist_ok=True)
+            os.makedirs('./demos/{RUNID}/',exist_ok=True)
             try:
                 generate_movie(f'demos/{RUNID}/{frame_number}.mp4', frames_for_gif, eval_rewards[0], PATH)
             except IndexError:
