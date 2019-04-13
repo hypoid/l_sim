@@ -333,7 +333,7 @@ class MyApp(ShowBase):
 
 
         # self.world.doPhysics(dt, 5, 1.0/120.0)
-        self.world.doPhysics(dt, 5, 1.0/180.0)
+        self.world.doPhysics(dt, 20, 1.0/240.0)
         self.reset_conv()
         self.check_teleportable(blocks_per_minute=59)
 
